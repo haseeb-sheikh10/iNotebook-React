@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const User = require('../models/UserSchema');
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -15,10 +15,11 @@ router.post('/createUser',
     body('password').isLength({ min: 8 }),
     async (req, res) => {
 
+        let success = false;
         //if there is error, return bad rquest and errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+            return res.status(400).json({ success, errors: errors.array() });
         }
 
         try {
@@ -27,7 +28,7 @@ router.post('/createUser',
             let user = await User.findOne({ email: req.body.email });
             //if yes, through an error
             if (user) {
-                return res.status(400).json({ error: "A user with this email already exist" });
+                return res.status(400).json({ success, error: "A user with this email already exist" });
             }
 
             //hashing password
@@ -48,44 +49,43 @@ router.post('/createUser',
                 }
             }
             const authToken = jwt.sign(data, JWT_Secret);
-            res.json({ authToken });
+            success = true;
+            res.json({ success, authToken });
 
         } catch (error) {
             console.error(error.message);
-            res.status(500).send("Some Error occured");
+            res.status(500).send(success, "Some Error occured");
         }
     }
 );
 
 // Route 2: Authenticate a user using: POST api/auth/loginUser. No Login Required.
 router.post('/loginUser',
-    body('email','Enter a valid Email').isEmail(),
+    body('email', 'Enter a valid Email').isEmail(),
     body('password', 'Password cannot be blank').exists(),
     async (req, res) => {
-
+        let success = false;
         //if there is error, return bad rquest and errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+            return res.status(400).json({success, errors: errors.array() });
         }
 
-        const {email, password} = req.body;
+        const { email, password } = req.body;
         try {
 
             //check whether user with this email exist or not 
-            let user = await User.findOne({email});
+            let user = await User.findOne({ email });
             //if not, through an error
-            if(!user)
-            {
-                return res.status(400).json({error: "Please try to login with correct credentials"});
+            if (!user) {
+                return res.status(400).json({success, error: "Please try to login with correct credentials" });
             }
 
             //if exist, compare the entered password
             const passCompare = await bcrypt.compare(password, user.password);
             //if do not match, through an error
-            if(!passCompare)
-            {
-                return res.status(400).json({error: "Please try to login with correct credentials"});
+            if (!passCompare) {
+                return res.status(400).json({success, error: "Please try to login with correct credentials" });
             }
 
             //if matched, generate an Authentication Token as a response 
@@ -94,8 +94,10 @@ router.post('/loginUser',
                     id: user.id
                 }
             }
+            // res.send(user.id)
             const authToken = jwt.sign(data, JWT_Secret);
-            res.json({ authToken });
+            success = true;
+            res.json({success, authToken });
 
         } catch (error) {
             console.error(error.message);
@@ -106,7 +108,7 @@ router.post('/loginUser',
 );
 
 // Route 3: Get loggedIn user details using: POST api/auth/getUser. Login Required.
-router.post('/getUser', fetchUser ,
+router.post('/getUser', fetchUser,
     async (req, res) => {
 
         try {

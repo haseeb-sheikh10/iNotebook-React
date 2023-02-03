@@ -2,7 +2,7 @@ const express = require('express');
 const fetchUser = require('../middleware/fetchuser');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-const Notes = require('../models/Notes');
+const Notes = require('../models/NotesSchema');
 
 
 router.get('/fetchNotes', fetchUser,
@@ -16,7 +16,7 @@ router.get('/fetchNotes', fetchUser,
 
 router.post('/addNote', fetchUser,
     body('title').isLength({ min: 5 }),
-    body('description').isLength({ min: 8 }),
+    body('description').isLength({ min: 5 }),
     async (req, res) => {
 
         const { title, description, tag } = req.body;
@@ -50,7 +50,7 @@ router.put('/updateNote/:id', fetchUser,
 
         const { title, description, tag } = req.body;
 
-        const newNote = {}
+        const newNote = {};
         if(title){newNote.title = title};
         if(description){newNote.description = description};
         if(tag){newNote.tag = tag};
